@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Algorithm Albatross</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f8fc;--card:#ffffff;--ink:#0f1b2d;--muted:#5b6b82;--line:#d6deea;
+  --blue:#1d5fd6;--blue-soft:#e3ecfb;--blue-deep:#0e3a8c;
+  --good:#1a8a4a;--warn:#c27a00;--bad:#c23b3b;
+  --l0:#1d5fd6;--l1:#7a4cd9;--l2:#d2691e;--l3:#159a8c;--l4:#8a8f99;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px}
+button,input,select,textarea{font:inherit}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:3px solid var(--blue)}
+#burger{width:42px;height:42px;border:2px solid var(--ink);border-radius:8px;background:var(--blue-soft);display:grid;place-items:center;cursor:pointer}
+#burger span{display:block;width:20px;height:2px;background:var(--ink);box-shadow:0 6px 0 var(--ink),0 -6px 0 var(--ink)}
+header h1{font-size:18px;margin:0;letter-spacing:.02em}
+header h1 b{color:var(--blue)}
+#dot{margin-left:auto;width:12px;height:12px;border-radius:50%;background:var(--line);border:2px solid var(--ink)}
+#dot.ok{background:var(--blue)}#dot.bad{background:var(--bad)}
+#scrim{position:fixed;inset:0;background:rgba(15,27,45,.25);z-index:30;display:none}
+#menu{position:fixed;top:0;left:0;bottom:0;width:min(84vw,330px);background:var(--card);border-right:3px solid var(--blue);z-index:40;transform:translateX(-105%);transition:transform .18s ease;overflow-y:auto;padding:14px}
+body.open #menu{transform:none}body.open #scrim{display:block}
+details{border:2px solid var(--ink);border-radius:10px;margin-bottom:10px;background:var(--card)}
+summary{padding:10px 12px;font-weight:700;cursor:pointer;list-style:none}
+summary::after{content:"+";float:right;color:var(--blue)}
+details[open] summary::after{content:"-"}
+.inner{padding:0 12px 12px}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=password],select,textarea{width:100%;padding:9px 10px;border:2px solid var(--ink);border-radius:8px;background:#fff}
+.btn{display:inline-block;padding:9px 14px;border:2px solid var(--ink);border-radius:8px;background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.soft{background:var(--blue-soft);color:var(--blue-deep)}
+.btn.danger{background:#fff;color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5}
+.nav button{display:block;width:100%;text-align:left;margin-bottom:6px}
+.nav button.on{background:var(--blue);color:#fff}
+main{padding:16px;max-width:900px;margin:0 auto}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.song{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.song:first-child{border-top:0}
+.song .t{flex:1;min-width:0}
+.song .t div:first-child{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:11px;padding:2px 7px;border-radius:999px;border:1.5px solid var(--ink);background:#fff;white-space:nowrap}
+.pill.ready{background:var(--blue-soft);color:var(--blue-deep)}
+.pill.error{color:var(--bad);border-color:var(--bad)}
+.pill.queued,.pill.analyzing{color:var(--warn);border-color:var(--warn)}
+.verdict{font-size:22px;font-weight:700;margin:4px 0 8px}
+.v-ABSOLUTE{color:var(--blue)}.v-TEMPLATE{color:var(--blue-deep)}.v-SHARED{color:var(--warn)}.v-DIFFERENT{color:var(--muted)}
+.bars .b{display:grid;grid-template-columns:120px 1fr 54px;gap:8px;align-items:center;margin:5px 0}
+.track{height:12px;border:1.5px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden}
+.fill{height:100%;background:var(--blue)}
+.num{font-family:"IBM Plex Mono",monospace;font-size:12px;text-align:right}
+canvas{width:100%;display:block;border:1.5px solid var(--line);border-radius:8px;background:#fff}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+td.n,th.n{text-align:right;font-family:"IBM Plex Mono",monospace}
+.empty{color:var(--muted);padding:6px 0}
+#toast{position:fixed;left:16px;right:16px;bottom:16px;z-index:50;background:var(--ink);color:#fff;padding:12px 14px;border-radius:10px;display:none;border-left:6px solid var(--blue)}
+.hide{display:none}
+@media (max-width:520px){.bars .b{grid-template-columns:92px 1fr 48px}}
+</style>
+</head>
+<body>
+<header>
+  <button id="burger" aria-label="Menu"><span></span></button>
+  <h1>Algorithm <b>Albatross</b></h1>
+  <div id="dot" title="server"></div>
+</header>
+<div id="scrim"></div>
+<aside id="menu">
+  <details open>
+    <summary>Views</summary>
+    <div class="inner nav">
+      <button class="btn ghost" data-view="library">Library</button>
+      <button class="btn ghost" data-view="compare">Compare</button>
+      <button class="btn ghost" data-view="matches">Matches</button>
+      <button class="btn ghost" data-view="pairs">Cover pairs</button>
+      <button class="btn ghost" data-view="calibration">Calibration</button>
+    </div>
+  </details>
+  <details>
+    <summary>Library tools</summary>
+    <div class="inner">
+      <label>Upload instrumentals</label>
+      <input type="file" id="upfile" accept="audio/*" multiple>
+      <div class="row" style="margin-top:8px"><button class="btn" id="upbtn">Upload</button><button class="btn soft" id="scanbtn">Scan library folder</button></div>
+      <label>Find pairs across library</label>
+      <div class="row"><button class="btn soft" id="sweepbtn">Run pair sweep</button></div>
+      <div class="meta" id="jobline" style="margin-top:6px"></div>
+    </div>
+  </details>
+  <details id="serverbox">
+    <summary>Server</summary>
+    <div class="inner">
+      <label>Frankfurt server URL</label>
+      <input type="text" id="srv" placeholder="xxxxxxxx.trycloudflare.com" autocomplete="off" autocapitalize="off">
+      <label>Token</label>
+      <input type="password" id="tok" autocomplete="off">
+      <div class="row" style="margin-top:8px"><button class="btn" id="savesrv">Save and connect</button></div>
+      <div class="meta" id="srvline" style="margin-top:6px"></div>
+    </div>
+  </details>
+</aside>
+
+<main>
+  <section id="v-library">
+    <div class="card">
+      <h2>Library</h2>
+      <div class="meta" id="libcount"></div>
+      <div id="songs"></div>
+    </div>
+  </section>
+
+  <section id="v-compare" class="hide">
+    <div class="card">
+      <h2>Compare two songs</h2>
+      <label>Song A (source)</label><select id="selA"></select>
+      <label>Song B (suspect)</label><select id="selB"></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="runcmp">Compare with tempo sweep</button></div>
+    </div>
+    <div id="result"></div>
+  </section>
+
+  <section id="v-matches" class="hide">
+    <div class="card">
+      <h2>Find matches for a song</h2>
+      <select id="selM"></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="runmatch">Find matches</button></div>
+    </div>
+    <div class="card"><div id="matchlist" class="empty">Pick a song.</div></div>
+  </section>
+
+  <section id="v-pairs" class="hide">
+    <div class="card">
+      <h2>Cover pairs</h2>
+      <div class="row"><button class="btn soft" id="pairsAll">All compared</button><button class="btn ghost" id="pairsConf">Confirmed only</button></div>
+      <div id="pairlist" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <section id="v-calibration" class="hide">
+    <div class="card"><h2>Calibration from confirmed and rejected pairs</h2><div id="calib"></div></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const LAYER_COLORS=["--l0","--l1","--l2","--l3","--l4"];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem("albatross-"+k);return v===null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem("albatross-"+k,v)}catch(e){}}};
+let SONGS=[];let pollTimer=null;let currentPair=null;
+
+function base(){let u=store.get("srv","").trim();if(!u)return "";if(!/^https?:\/\//.test(u))u="https://"+u;return u.replace(/\/+$/,"")}
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",3200)}
+async function api(path,opt={}){
+  if(!base())throw new Error("Set the server URL in the menu");
+  opt.headers=Object.assign({"x-albatross-token":store.get("tok","")},opt.headers||{});
+  const r=await fetch(base()+path,opt);
+  if(!r.ok){let d="";try{d=(await r.json()).detail}catch(e){}throw new Error(d||("HTTP "+r.status))}
+  return r.json();
+}
+const post=(p,b)=>api(p,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b||{})});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtT=s=>{s=Math.round(s||0);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const title=id=>(SONGS.find(s=>s.id===id)||{}).title||("song "+id);
+
+$("#burger").onclick=()=>document.body.classList.toggle("open");
+$("#scrim").onclick=()=>document.body.classList.remove("open");
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{show(b.dataset.view);document.body.classList.remove("open")});
+function show(v){
+  document.querySelectorAll("main>section").forEach(s=>s.classList.toggle("hide",s.id!=="v-"+v));
+  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  store.set("view",v);
+  if(v==="pairs")loadPairs(false);
+  if(v==="calibration")loadCalib();
+}
+
+$("#srv").value=store.get("srv","");$("#tok").value=store.get("tok","");
+$("#savesrv").onclick=async()=>{store.set("srv",$("#srv").value.trim());store.set("tok",$("#tok").value.trim());await health();loadSongs()};
+
+async function health(){
+  try{const h=await api("/api/health");$("#dot").className="ok";
+    const c=h.counts||{};$("#srvline").textContent="Connected. Ready "+(c.ready||0)+", waiting "+((c.queued||0)+(c.analyzing||0))+", errors "+(c.error||0);return true}
+  catch(e){$("#dot").className="bad";$("#srvline").textContent=e.message;return false}
+}
+
+async function loadSongs(){
+  try{SONGS=await api("/api/songs")}catch(e){$("#songs").innerHTML='<div class="empty">'+esc(e.message)+'</div>';return}
+  const busy=SONGS.some(s=>s.status==="queued"||s.status==="analyzing");
+  $("#libcount").textContent=SONGS.length+" songs"+(busy?", analyzing in progress":"");
+  $("#songs").innerHTML=SONGS.length?SONGS.map(s=>`
+    <div class="song">
+      <div class="t"><div>${esc(s.title)}</div>
+        <div class="meta">${s.status==="ready"?`${s.tempo} bpm, ${esc(s.key_name)}, ${s.n_bars} bars, ${s.n_sections} sections, ${fmtT(s.duration)}`:esc(s.error||s.path)}</div></div>
+      <span class="pill ${s.status}">${s.status}</span>
+      ${s.status==="ready"?`<button class="btn soft" onclick="pick(${s.id},'A')">A</button><button class="btn soft" onclick="pick(${s.id},'B')">B</button>`:s.status==="error"?`<button class="btn ghost" onclick="reanalyze(${s.id})">Retry</button>`:""}
+    </div>`).join(""):'<div class="empty">No songs yet. Upload instrumentals or scan the library folder from the menu.</div>';
+  const ready=SONGS.filter(s=>s.status==="ready");
+  const opts=ready.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join("");
+  ["#selA","#selB","#selM"].forEach(id=>{const el=$(id),v=el.value;el.innerHTML=opts;if(v)el.value=v});
+  clearTimeout(pollTimer);if(busy)pollTimer=setTimeout(()=>{loadSongs();health()},5000);
+}
+window.pick=(id,side)=>{$(side==="A"?"#selA":"#selB").value=id;toast("Set as song "+side);if($("#selA").value&&$("#selB").value&&$("#selA").value!==$("#selB").value)show("compare")};
+window.reanalyze=async id=>{await post("/api/songs/"+id+"/reanalyze");loadSongs()};
+
+$("#upbtn").onclick=async()=>{
+  const files=[...$("#upfile").files];if(!files.length)return toast("Pick audio files first");
+  $("#upbtn").disabled=true;
+  for(const [i,f] of files.entries()){
+    toast("Uploading "+(i+1)+" of "+files.length+": "+f.name);
+    const fd=new FormData();fd.append("file",f);
+    try{await api("/api/upload",{method:"POST",body:fd})}catch(e){toast(f.name+": "+e.message)}
+  }
+  $("#upbtn").disabled=false;$("#upfile").value="";loadSongs();
+};
+$("#scanbtn").onclick=async()=>{try{const r=await post("/api/scan");toast("Added "+r.added+" new files");loadSongs()}catch(e){toast(e.message)}};
+$("#sweepbtn").onclick=async()=>{try{await post("/api/sweep",{per_song:5});toast("Pair sweep started");watchJobs()}catch(e){toast(e.message)}};
+async function watchJobs(){
+  try{const j=await api("/api/jobs");const last=j[0];
+    if(!last){$("#jobline").textContent="";return}
+    $("#jobline").textContent="Sweep "+last.status+": "+(last.detail||"");
+    if(last.status==="queued"||last.status==="running")setTimeout(watchJobs,3000);
+  }catch(e){}
+}
+
+$("#runcmp").onclick=async()=>{
+  const a=+$("#selA").value,b=+$("#selB").value;if(!a||!b||a===b)return toast("Pick two different songs");
+  $("#runcmp").disabled=true;$("#result").innerHTML='<div class="card empty">Comparing, the tempo sweep takes a few seconds.</div>';
+  try{renderResult(await post("/api/compare",{a,b,sweep:true}))}catch(e){$("#result").innerHTML='<div class="card empty">'+esc(e.message)+'</div>'}
+  $("#runcmp").disabled=false;
+};
+
+function bar(label,v){return `<div class="b"><div>${label}</div><div class="track"><div class="fill" style="width:${Math.round(v*100)}%"></div></div><div class="num">${(v*100).toFixed(0)}%</div></div>`}
+
+function renderResult(r){
+  currentPair=r;
+  const vkey=r.verdict.split(" ")[0];
+  const sw=r.sweep;
+  $("#result").innerHTML=`
+  <div class="card">
+    <div class="meta">${esc(title(r.a))}  vs  ${esc(title(r.b))}</div>
+    <div class="verdict v-${vkey}">${r.verdict}</div>
+    <div class="bars">
+      ${bar("Formula",r.formula_score)}
+      ${bar("Lockstep bars",r.lockstep_coverage)}
+      ${bar("Rarity weighted",r.rarity_weighted)}
+      ${bar("Bar for bar",r.diagonal)}
+      ${bar("Section map",r.section_score)}
+      ${bar("Cue points",r.cue_score)}
+    </div>
+    <div class="meta" style="margin-top:8px">Longest lockstep run ${r.longest_run_bars} bars from bar ${r.longest_run_start_bar+1}. B is transposed ${r.transpose_semitones>0?"+":""}${r.transpose_semitones} semitones. Tempo A ${r.tempo_a}, B ${r.tempo_b}, bpm ratio ${r.bpm_ratio}${r.grid_factor!==1?", grid regridded by "+r.grid_factor:""}. Section pattern A ${r.section_pattern_a}, B ${r.section_pattern_b}.</div>
+  </div>
+  <div class="card"><h2>Layers</h2><div class="bars">${r.layers.map(l=>bar(l,r.layer_scores[l])).join("")}</div></div>
+  <div class="card"><h2>Section maps and cue points</h2><canvas id="cvSec" height="150"></canvas>
+    <div class="meta" style="margin-top:6px">Top row is A, bottom row is B, both measured in bars. Blue links connect cue points that land on the same bar.</div></div>
+  <div class="card"><h2>Bar by bar alignment</h2><canvas id="cvAlign" height="120"></canvas>
+    <div class="legend">${r.layers.map((l,i)=>`<span><i style="background:${css(LAYER_COLORS[i])}"></i>${l}</span>`).join("")}</div></div>
+  ${sw?`<div class="card"><h2>Tempo sweep</h2><canvas id="cvSweep" height="150"></canvas>
+    <div class="meta" style="margin-top:6px">Best fit when B is stretched by ${sw.best_ratio} with an offset of ${sw.best_offset_s} seconds. Match ${(sw.best_score*100).toFixed(1)}%.</div></div>`:""}
+  <div class="card"><h2>Mark this pair</h2>
+    <label>Note</label><input type="text" id="pairnote" placeholder="where you heard it, which is the original">
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="mark(1)">Confirm absolute match</button><button class="btn danger" onclick="mark(-1)">Reject</button><button class="btn ghost" onclick="mark(0)">Clear</button></div></div>`;
+  requestAnimationFrame(()=>{drawSections(r);drawAlign(r);if(sw)drawSweep(sw)});
+}
+window.mark=async c=>{if(!currentPair)return;try{await post("/api/confirm",{a:currentPair.a,b:currentPair.b,confirmed:c,note:$("#pairnote").value||""});toast(c===1?"Confirmed as cover pair":c===-1?"Rejected":"Cleared")}catch(e){toast(e.message)}};
+
+function prep(cv){const dpr=window.devicePixelRatio||1;const w=cv.clientWidth,h=cv.height;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";const x=cv.getContext("2d");x.scale(dpr,dpr);return [x,w,h]}
+const SEC_COLORS=["#cfe0fb","#9fc0f5","#6f9fee","#e8d9fb","#c7b0f2","#fde3c8","#c8efe9","#e4e7ec"];
+function drawSections(r){
+  const cv=$("#cvSec");if(!cv)return;const [x,w,h]=prep(cv);
+  const pad=8,rowH=44,yA=18,yB=h-rowH-18;
+  const n=Math.max(r.n_bars_a,r.n_bars_b);const sx=b=>pad+(w-2*pad)*b/n;
+  x.font="600 12px IBM Plex Mono, monospace";x.textBaseline="middle";
+  const row=(secs,y)=>secs.forEach(s=>{const i=s.label.charCodeAt(0)-65;x.fillStyle=SEC_COLORS[i%SEC_COLORS.length];x.fillRect(sx(s.start),y,sx(s.end)-sx(s.start),rowH);x.strokeStyle="#0f1b2d";x.lineWidth=1.5;x.strokeRect(sx(s.start),y,sx(s.end)-sx(s.start),rowH);x.fillStyle="#0f1b2d";if(sx(s.end)-sx(s.start)>22)x.fillText(s.label+" "+s.bars,sx(s.start)+4,y+rowH/2)});
+  row(r.sections_a,yA);row(r.sections_b,yB);
+  x.strokeStyle=css("--blue");x.lineWidth=2;
+  (r.cue_hits||[]).forEach(c=>{x.beginPath();x.moveTo(sx(c.a_bar),yA+rowH);x.lineTo(sx(c.b_bar),yB);x.stroke()});
+  x.fillStyle=css("--muted");x.font="11px IBM Plex Mono, monospace";x.fillText("A",2,8);x.fillText("B",2,h-8);
+}
+function drawAlign(r){
+  const cv=$("#cvAlign");if(!cv)return;const [x,w,h]=prep(cv);
+  const n=r.n_bars_a,pad=4,rows=r.layers.length,rh=(h-2*pad)/rows,bw=(w-2*pad)/n;
+  x.fillStyle="#f0f3f8";x.fillRect(0,0,w,h);
+  r.alignment.forEach(([i,j,mask])=>{for(let k=0;k<rows;k++){if(mask&(1<<k)){x.fillStyle=css(LAYER_COLORS[k]);x.fillRect(pad+i*bw,pad+k*rh,Math.max(1,bw-0.5),rh-2)}}});
+  x.strokeStyle="#0f1b2d";x.lineWidth=1;(r.sections_a||[]).forEach(s=>{x.beginPath();x.moveTo(pad+s.start*bw,0);x.lineTo(pad+s.start*bw,h);x.stroke()});
+}
+function drawSweep(sw){
+  const cv=$("#cvSweep");if(!cv)return;const [x,w,h]=prep(cv);
+  const pad=28,c=sw.curve,lo=c[0].ratio,hi=c[c.length-1].ratio;
+  const mn=Math.min(...c.map(p=>p.score)),mx=Math.max(...c.map(p=>p.score));
+  const px=r=>pad+(w-2*pad)*(r-lo)/(hi-lo||1),py=s=>h-pad-(h-2*pad)*(s-mn)/((mx-mn)||1);
+  x.strokeStyle=css("--line");x.lineWidth=1;x.beginPath();x.moveTo(pad,h-pad);x.lineTo(w-pad,h-pad);x.stroke();
+  x.fillStyle=css("--muted");x.font="11px IBM Plex Mono, monospace";x.textAlign="center";
+  [lo,1,hi].forEach(r=>{x.fillText(r.toFixed(2),px(r),h-10)});
+  x.strokeStyle=css("--blue");x.lineWidth=2.5;x.beginPath();c.forEach((p,i)=>i?x.lineTo(px(p.ratio),py(p.score)):x.moveTo(px(p.ratio),py(p.score)));x.stroke();
+  x.fillStyle=css("--blue-deep");x.beginPath();x.arc(px(sw.best_ratio),py(sw.best_score),5,0,7);x.fill();
+  x.strokeStyle=css("--muted");x.setLineDash([4,4]);x.beginPath();x.moveTo(px(1),pad/2);x.lineTo(px(1),h-pad);x.stroke();x.setLineDash([]);
+}
+
+$("#runmatch").onclick=async()=>{
+  const id=+$("#selM").value;if(!id)return toast("Pick a song");
+  $("#matchlist").innerHTML="Searching the library.";
+  try{const m=await api("/api/match/"+id+"?limit=8");
+    $("#matchlist").innerHTML=m.length?`<table><tr><th>Song</th><th>Verdict</th><th class="n">Formula</th><th class="n">Bpm</th></tr>${m.map(r=>`<tr onclick="openPair(${id},${r.id})" style="cursor:pointer"><td>${esc(title(r.id))}</td><td>${r.verdict}</td><td class="n">${(r.formula_score*100).toFixed(0)}%</td><td class="n">${r.bpm_ratio}</td></tr>`).join("")}</table>`:'<div class="empty">No other analyzed songs yet.</div>';
+  }catch(e){$("#matchlist").innerHTML=esc(e.message)}
+};
+window.openPair=async(a,b)=>{$("#selA").value=a;$("#selB").value=b;show("compare");$("#result").innerHTML='<div class="card empty">Comparing, the tempo sweep takes a few seconds.</div>';try{renderResult(await post("/api/compare",{a,b,sweep:true}))}catch(e){toast(e.message)}};
+
+async function loadPairs(confOnly){
+  $("#pairsAll").className="btn "+(confOnly?"ghost":"soft");$("#pairsConf").className="btn "+(confOnly?"soft":"ghost");
+  try{const p=await api("/api/pairs?limit=200"+(confOnly?"&confirmed_only=true":""));
+    $("#pairlist").innerHTML=p.length?`<table><tr><th>A</th><th>B</th><th>Verdict</th><th class="n">Formula</th><th></th></tr>${p.map(r=>`<tr onclick="openPair(${r.a},${r.b})" style="cursor:pointer"><td>${esc(r.title_a)}</td><td>${esc(r.title_b)}</td><td>${r.verdict}</td><td class="n">${(r.formula*100).toFixed(0)}%</td><td>${r.confirmed===1?'<span class="pill ready">confirmed</span>':r.confirmed===-1?'<span class="pill error">rejected</span>':""}</td></tr>`).join("")}</table>`:'<div class="empty">No pairs compared yet.</div>';
+  }catch(e){$("#pairlist").innerHTML=esc(e.message)}
+}
+$("#pairsAll").onclick=()=>loadPairs(false);$("#pairsConf").onclick=()=>loadPairs(true);
+
+async function loadCalib(){
+  try{const c=await api("/api/calibration");
+    const keys=Object.keys(c.confirmed.metrics).concat(Object.keys(c.confirmed.layers));
+    const cell=v=>v?`${(v.min*100).toFixed(0)} / ${(v.median*100).toFixed(0)} / ${(v.max*100).toFixed(0)}`:"none";
+    const get=(g,k)=>g.metrics[k]!==undefined?g.metrics[k]:g.layers[k];
+    $("#calib").innerHTML=`<div class="meta">Confirmed pairs ${c.confirmed.count}, rejected pairs ${c.rejected.count}. Cells show min / median / max percent.</div>
+    <table style="margin-top:8px"><tr><th>Metric</th><th class="n">Confirmed</th><th class="n">Rejected</th></tr>${keys.map(k=>`<tr><td>${k.replace(/_/g," ")}</td><td class="n">${cell(get(c.confirmed,k))}</td><td class="n">${cell(get(c.rejected,k))}</td></tr>`).join("")}</table>`;
+  }catch(e){$("#calib").innerHTML=esc(e.message)}
+}
+
+window.addEventListener("resize",()=>{if(currentPair){drawSections(currentPair);drawAlign(currentPair);if(currentPair.sweep)drawSweep(currentPair.sweep)}});
+
+(async()=>{
+  show(store.get("view","library"));
+  if(!base()){$("#serverbox").open=true;document.body.classList.add("open");$("#songs").innerHTML='<div class="empty">Open the menu and enter the Frankfurt server URL and token.</div>';return}
+  await health();loadSongs();watchJobs();
+})();
+</script>
+</body>
+</html>

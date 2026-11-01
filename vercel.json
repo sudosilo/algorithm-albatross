@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/algorithm-albatross-v1.html" }
+  ]
+}
