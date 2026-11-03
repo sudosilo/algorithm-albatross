@@ -1,7 +1,7 @@
 """Algorithm Albatross v1 skeleton extraction.
 
 Turns an instrumental audio file into a song skeleton measured in bars:
-beat grid, key, per bar chroma, chords, drum pattern, top line melody,
+beat grid, key, per bar chroma, chords, drum pattern, top line melody, bass line,
 energy, sections, and cue points at every transition.
 """
 
@@ -14,7 +14,7 @@ import librosa
 SR = 22050
 HOP = 512
 SWEEP_FPS = 4.0
-SKELETON_VERSION = 1
+SKELETON_VERSION = 2
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
@@ -145,6 +145,32 @@ def analyze_file(path):
     beat_melody = (mel_bins % 12).astype(int)
     beat_melody[mel_strength < np.percentile(mel_strength, 20)] = -1
 
+    # bass line: lowest strong pitch on an eighth note grid from the harmonic part, C1 to B3
+    # octave and fifth overtones of each note get subtracted so the line follows the played note
+    bass_cqt = np.abs(librosa.cqt(y_h, sr=SR, hop_length=HOP, fmin=librosa.note_to_hz("C1"), n_bins=36, bins_per_octave=12))
+    bass_cqt = bass_cqt[:, :n_frames]
+    bass_floor = float(np.percentile(bass_cqt.max(axis=0), 25))
+
+    def bass_steps(f0, f1):
+        out = []
+        edges = np.linspace(f0, f1, 9)
+        for s0, s1 in zip(edges[:-1], edges[1:]):
+            a0, a1 = int(round(s0)), max(int(round(s1)), int(round(s0)) + 1)
+            col = bass_cqt[:, a0:a1].mean(axis=1) if a1 <= bass_cqt.shape[1] else np.zeros(36)
+            clean = col.copy()
+            for semis, amt in ((12, 0.9), (19, 0.8), (24, 0.7)):
+                clean[semis:] -= amt * col[:-semis]
+            clean = np.clip(clean, 0, None)
+            peak = clean.max()
+            if peak <= bass_floor:
+                out.append(-1)
+                continue
+            left = np.r_[-1.0, clean[:-1]]
+            right = np.r_[clean[1:], -1.0]
+            peaks = np.where((clean >= 0.6 * peak) & (clean >= left) & (clean >= right))[0]
+            out.append(int(peaks[0] % 12))
+        return out
+
     rms = librosa.feature.rms(y=y, hop_length=HOP)[0][:n_frames]
     beat_rms = np.array([rms[s:max(e, s + 1)].mean() for s, e in zip(beat_bounds[:-1], beat_bounds[1:])])
 
@@ -169,6 +195,7 @@ def analyze_file(path):
     bar_times = [float(beat_times[b]) for b in bar_starts] + [float(beat_times[bar_starts[-1] + 4])]
 
     bar_chroma, bar_chords, bar_main, bar_melody, bar_energy, bar_drum, bar_mfcc_idx = [], [], [], [], [], [], []
+    bar_bass = []
     mfcc = librosa.feature.mfcc(y=y, sr=SR, hop_length=HOP, n_mfcc=13)[:, :n_frames]
     mfcc_beats = _segment_mean(mfcc, beat_bounds)
     bar_mfcc = []
@@ -180,6 +207,7 @@ def analyze_file(path):
         valid = ch[ch >= 0]
         bar_main.append(int(np.bincount(valid).argmax()) if valid.size else -1)
         bar_melody.append([int(m) for m in beat_melody[sl]])
+        bar_bass.append(bass_steps(beat_bounds[b], beat_bounds[b + 4]))
         bar_energy.append(float(beat_rms[sl].mean()))
         bar_mfcc.append(mfcc_beats[:, sl].mean(axis=1))
         # sixteen step drum pattern from the percussive onset envelope
@@ -274,6 +302,7 @@ def analyze_file(path):
         "bar_main_chord": bar_main,
         "bar_chord_names": [chord_name(c) for c in bar_main],
         "bar_melody": bar_melody,
+        "bar_bass": bar_bass,
         "bar_energy": np.round(bar_energy, 4).tolist(),
         "bar_drum": np.round(bar_drum, 3).tolist(),
         "novelty": np.round(novelty, 3).tolist(),

@@ -11,8 +11,8 @@ from collections import Counter
 import numpy as np
 import librosa
 
-LAYER_WEIGHTS = {"harmony": 0.3, "chords": 0.2, "drums": 0.2, "melody": 0.2, "energy": 0.1}
-LAYER_THRESH = {"harmony": 0.85, "chords": 0.75, "drums": 0.8, "melody": 0.5, "energy": 0.85}
+LAYER_WEIGHTS = {"harmony": 0.25, "chords": 0.15, "drums": 0.15, "melody": 0.15, "bass": 0.2, "energy": 0.1}
+LAYER_THRESH = {"harmony": 0.85, "chords": 0.75, "drums": 0.8, "melody": 0.5, "bass": 0.5, "energy": 0.85}
 LAYERS = list(LAYER_WEIGHTS.keys())
 
 
@@ -43,11 +43,16 @@ def best_transposition(a, b):
     return best_k
 
 
+def _bass(sk):
+    return sk.get("bar_bass") or [[-1] * 8 for _ in range(sk["n_bars"])]
+
+
 def _regrid(sk, factor):
     """Merge pairs of bars (factor 0.5) or split bars (factor 2) to fix half or double time grids."""
     if factor == 1:
         return sk
     out = dict(sk)
+    bass = _bass(sk)
     if factor == 0.5:
         n = sk["n_bars"] // 2
         idx = [(2 * i, 2 * i + 1) for i in range(n)]
@@ -55,6 +60,7 @@ def _regrid(sk, factor):
         out["bar_chords"] = [sk["bar_chords"][i][::2] + sk["bar_chords"][j][::2] for i, j in idx]
         out["bar_main_chord"] = [sk["bar_main_chord"][i] for i, _ in idx]
         out["bar_melody"] = [sk["bar_melody"][i][::2] + sk["bar_melody"][j][::2] for i, j in idx]
+        out["bar_bass"] = [bass[i][::2] + bass[j][::2] for i, j in idx]
         out["bar_energy"] = [(sk["bar_energy"][i] + sk["bar_energy"][j]) / 2 for i, j in idx]
         out["bar_drum"] = [sk["bar_drum"][i][::2] + sk["bar_drum"][j][::2] for i, j in idx]
         out["bar_times"] = [sk["bar_times"][2 * i] for i in range(n)] + [sk["bar_times"][2 * n]]
@@ -67,6 +73,7 @@ def _regrid(sk, factor):
         out["bar_chords"] = [h for c in sk["bar_chords"] for h in ([c[0], c[0], c[1], c[1]], [c[2], c[2], c[3], c[3]])]
         out["bar_main_chord"] = [c for c in sk["bar_main_chord"] for _ in (0, 1)]
         out["bar_melody"] = [h for c in sk["bar_melody"] for h in ([c[0], c[0], c[1], c[1]], [c[2], c[2], c[3], c[3]])]
+        out["bar_bass"] = [h for c in bass for h in ([x for x in c[:4] for _ in (0, 1)], [x for x in c[4:] for _ in (0, 1)])]
         out["bar_energy"] = [e for e in sk["bar_energy"] for _ in (0, 1)]
         out["bar_drum"] = [h for d in sk["bar_drum"] for h in ([x for x in d[:8] for _ in (0, 1)], [x for x in d[8:] for _ in (0, 1)])]
         bt = sk["bar_times"]
@@ -98,11 +105,18 @@ def layer_matrices(a, b, k):
     cnt = valid.sum(axis=2)
     melody = np.where(cnt > 0, meq.sum(axis=2) / np.maximum(cnt, 1), 0.0)
 
+    ba = np.array(_bass(a))
+    bb = np.array([[_shift_pc(p, k) for p in row] for row in _bass(b)])
+    bvalid = (ba[:, None, :] >= 0) & (bb[None, :, :] >= 0)
+    beq = (ba[:, None, :] == bb[None, :, :]) & bvalid
+    bcnt = bvalid.sum(axis=2)
+    bass = np.where(bcnt > 0, beq.sum(axis=2) / np.maximum(bcnt, 1), 0.0)
+
     ea = np.array(a["bar_energy"])
     eb = np.array(b["bar_energy"])
     energy = 1.0 - np.abs(ea[:, None] - eb[None, :])
 
-    return {"harmony": harmony, "chords": chords, "drums": drums, "melody": melody, "energy": energy}
+    return {"harmony": harmony, "chords": chords, "drums": drums, "melody": melody, "bass": bass, "energy": energy}
 
 
 def _bar_tokens(sk):
